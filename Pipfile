@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pydrive = "*"
+telethon = "*"
+pytelegrambotapi = "*"
+toml = "*"
+sqlalchemy = "*"
+aiohttp = "*"
+
+[dev-packages]
+pytest = "*"
+blue = "*"
+isort = "*"
+ruff = "*"
+
+[requires]
+python_version = "3.11"
