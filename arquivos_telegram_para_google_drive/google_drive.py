@@ -1,3 +1,4 @@
+import toml
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 
@@ -7,6 +8,9 @@ drive = GoogleDrive(gauth)
 
 
 def upload_file(file_path):
-    file = drive.CreateFile({'title': file_path.name})
+    config = toml.load(open('.config.toml', 'r'))
+    file = drive.CreateFile(
+        {'title': file_path.name, 'parents': [{'id': config['FOLDER_ID']}]}
+    )
     file.SetContentFile(str(file_path.absolute()))
     file.Upload()

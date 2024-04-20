@@ -2,6 +2,7 @@ import asyncio
 import os
 from pathlib import Path
 
+import toml
 from sqlalchemy import select
 from telebot import asyncio_filters
 from telebot.async_telebot import AsyncTeleBot
@@ -27,13 +28,14 @@ class MyStates(StatesGroup):
     on_chat_id = State()
     on_message_link = State()
     on_downloads_number = State()
+    on_folder_id = State()
 
 
 @bot.message_handler(commands=['start', 'help'])
 async def start(message):
     await bot.send_message(
         message.chat.id,
-        'Como Usar:\n\n/configure - Para fazer login com a conta\n\n/batch - Para fazer os downloads para Google Drive',
+        'Como Usar:\n\n/configure - Para fazer login com a conta\n\n/batch - Para fazer os downloads para Google Drive\n\n/set_folder_id - Para definir a pasta para qual fazer o upload',
     )
 
 
@@ -172,14 +174,18 @@ async def download_all_content(callback_query):
 @bot.message_handler(state=MyStates.on_chat_id)
 async def on_chat_id(message):
     client = await get_client(message.chat.id)
-    await bot.send_message(message.chat.id, 'Fazendo Downloads...')
+    downloading_message = await bot.send_message(
+        message.chat.id, 'Fazendo Downloads...'
+    )
     async for group_message in client.iter_messages(message.text):
         await group_message.download_media(file='uploads')
         file_path = Path('uploads') / os.listdir('uploads')[0]
         upload_file(file_path.absolute())
         os.remove(file_path.absolute())
     await bot.send_message(message.chat.id, 'Downloads Concluídos')
+    await bot.delete_message(message.chat.id, downloading_message.id)
     await bot.delete_state(message.chat.id, message.chat.id)
+    await start(message)
 
 
 @bot.callback_query_handler(
@@ -213,7 +219,9 @@ async def on_message_link(message):
 async def on_downloads_number(message):
     async with bot.retrieve_data(message.chat.id, message.chat.id) as data:
         client = await get_client(message.chat.id)
-        await bot.send_message(message.chat.id, 'Fazendo Downloads...')
+        downloading_message = await bot.send_message(
+            message.chat.id, 'Fazendo Downloads...'
+        )
         chat = '/'.join(data['message_link'].split('/')[:-1])
         message_id = int(data['message_link'].split('/')[-1])
         for group_message in await client.get_messages(
@@ -226,7 +234,9 @@ async def on_downloads_number(message):
             upload_file(file_path.absolute())
             os.remove(file_path.absolute())
         await bot.send_message(message.chat.id, 'Downloads Concluídos')
+        await bot.delete_message(message.chat.id, downloading_message.id)
         await bot.delete_state(message.chat.id, message.chat.id)
+        await start(message)
 
 
 async def get_client(user_id):
@@ -235,6 +245,23 @@ async def get_client(user_id):
     )
     await user_client.start()
     return user_client
+
+
+@bot.message_handler(commands=['set_folder_id'])
+async def set_folder_id(message):
+    await bot.send_message(message.chat.id, 'Digite o ID da pasta')
+    await bot.set_state(
+        message.chat.id, MyStates.on_folder_id, message.chat.id
+    )
+
+
+@bot.message_handler(state=MyStates.on_folder_id)
+async def on_folder_id(message):
+    global config
+    config['FOLDER_ID'] = message.text
+    toml.dump(config, open('.config.toml', 'w'))
+    await bot.send_message(message.chat.id, 'Pasta Alterada!')
+    await start(message)
 
 
 if __name__ == '__main__':
