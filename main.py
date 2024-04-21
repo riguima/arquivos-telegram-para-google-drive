@@ -1,4 +1,5 @@
 import asyncio
+import re
 import os
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from telebot.asyncio_storage import StateMemoryStorage
 from telebot.util import quick_markup
 from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError
+from telethon.types import PeerChannel
 
 from arquivos_telegram_para_google_drive.config import config
 from arquivos_telegram_para_google_drive.database import Session
@@ -223,6 +225,8 @@ async def on_downloads_number(message):
             message.chat.id, 'Fazendo Downloads...'
         )
         chat = '/'.join(data['message_link'].split('/')[:-1])
+        if re.findall(r'/\d+$', chat):
+            chat = PeerChannel(int(re.findall(r'/(\d+)$', chat)[0]))
         message_id = int(data['message_link'].split('/')[-1])
         for group_message in await client.get_messages(
             chat,

@@ -10,6 +10,7 @@ pytelegrambotapi = "*"
 toml = "*"
 sqlalchemy = "*"
 aiohttp = "*"
+httplib2 = "==0.15.0"
 
 [dev-packages]
 pytest = "*"
